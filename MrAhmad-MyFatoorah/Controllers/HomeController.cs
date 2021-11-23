@@ -51,12 +51,15 @@ namespace MrAhmad_MyFatoorah.Controllers
             try
             {
                 var getcotext = Config.GetContext();
+                //Get Count Attempts 
                 var numberOfAttempts = getcotext.Attempts.Where(x => x.PhoneNumber == phoneNumber).Count();
                 if (numberOfAttempts > 5)
                     return BadRequest($"You have tried several times, please try again later");
 
+                //Get Codes sent to the phoneNumber
                 var checkCodes = getcotext.ValidationCodes.Where(x=>x.Code == PIN && x.PhoneNumber == phoneNumber);
-                if(!checkCodes.Any())
+                //If this code does not exist, a failed attempt is recorded
+                if (!checkCodes.Any())
                 {
                     await getcotext.Attempts.AddAsync(new()
                     {
@@ -67,9 +70,10 @@ namespace MrAhmad_MyFatoorah.Controllers
                     return BadRequest($"The entered code is invalid");
                 }
 
+                //Checking the timing of sending the code
                 if (checkCodes.Max(x => x.SendDate) > DateTime.Now.AddMinutes(-15))
                     return BadRequest($"The code has expired");
-
+                //If the code is successful, delete previous attempts
                 getcotext.Attempts.RemoveRange(getcotext.Attempts.Where(x => x.PhoneNumber == phoneNumber));
                 await getcotext.SaveChangesAsync();
 
